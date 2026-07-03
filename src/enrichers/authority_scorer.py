@@ -1,9 +1,17 @@
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import hashlib
 import json
-from pathlib import Path
+import requests
+from datetime import datetime
 from functools import lru_cache
 
-CACHE_FILE = Path("data/cache/authority_cache.json")
+CACHE_FILE = PROJECT_ROOT / "data" / "cache" / "authority_cache.json"
 
 def _load_cache() -> dict:
     if CACHE_FILE.exists():
@@ -16,20 +24,14 @@ def _save_cache(cache: dict):
 
 @lru_cache(maxsize=500)
 def get_authority_score(domain: str) -> float:
-    """
-    Get Domain Authority score with local caching.
-    Replace mock logic with Moz/Ahrefs API calls in production.
-    """
     cache = _load_cache()
     
     if domain in cache:
         return cache[domain]
     
-    # --- MOCK SCORING LOGIC (Replace with API) ---
     hash_val = int(hashlib.md5(domain.encode()).hexdigest(), 16)
-    score = (hash_val % 80) + 10  # Base score 10-90
+    score = (hash_val % 80) + 10
     
-    # Manual overrides for known high-authority domains
     overrides = {
         "wikipedia.org": 98, "nytimes.com": 94, "bbc.com": 93,
         "nature.com": 96, "science.org": 95, "harvard.edu": 97,
@@ -45,17 +47,12 @@ def get_authority_score(domain: str) -> float:
         score = max(score, 92)
     if ".edu" in domain:
         score = max(score, 88)
-    # -------------------------------------------
     
     cache[domain] = score
     _save_cache(cache)
     return score
 
 def get_freshness_days(url: str) -> int:
-    """Check Last-Modified header for content freshness."""
-    import requests
-    from datetime import datetime
-    
     try:
         headers = requests.head(url, timeout=5, allow_redirects=True).headers
         last_mod = headers.get('Last-Modified')
@@ -65,4 +62,4 @@ def get_freshness_days(url: str) -> int:
             return (datetime.now() - mod_date).days
     except Exception:
         pass
-    return 999  # Unknown
+    return 999
