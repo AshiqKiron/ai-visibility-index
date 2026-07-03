@@ -10,21 +10,43 @@ METRICS_PATH = BASE_DIR / "data" / "processed" / "metrics_summary.csv"
 st.title("📉 Volatility & Flicker Tracker")
 
 def load_volatility_data():
-    if METRICS_PATH.exists():
-        try:
-            df = pd.read_csv(METRICS_PATH)
-            df['date'] = pd.to_datetime(df['date'])
-            return df
-        except Exception as e:
-            st.error(f"Error loading volatility data: {e}")
+    """Safely load volatility data with comprehensive error handling."""
+    if not METRICS_PATH.exists():
+        st.warning("⚠️ No metrics file found. The GitHub Action collector hasn't run yet.")
+        return pd.DataFrame()
+    
+    # Check for empty file before parsing
+    if METRICS_PATH.stat().st_size == 0:
+        st.warning("⚠️ Data file exists but is empty. Collector produced no results.")
+        return pd.DataFrame()
+    
+    try:
+        df = pd.read_csv(METRICS_PATH)
+        
+        # Validate required columns exist
+        required_cols = ['date', 'model', 'flicker_rate']
+        missing = [c for c in required_cols if c not in df.columns]
+        if missing:
+            st.error(f"Data file malformed. Missing columns: {missing}")
             return pd.DataFrame()
-    else:
-        st.warning("️ No metrics data found. Run the GitHub Action collector first.")
+            
+        if df.empty:
+            st.warning("⚠️ Data file has headers but no rows. Waiting for collection...")
+            return pd.DataFrame()
+            
+        df['date'] = pd.to_datetime(df['date'])
+        return df
+        
+    except pd.errors.EmptyDataError:
+        st.warning("⚠️ Empty data file. Run the GitHub Action collector first.")
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Error loading volatility data: {str(e)}")
         return pd.DataFrame()
 
 df = load_volatility_data()
 
-if not df.empty and 'model' in df.columns:
+if not df.empty:
     models = sorted(df['model'].unique())
     selected_model = st.selectbox("Select Model", models)
     
@@ -57,4 +79,4 @@ if not df.empty and 'model' in df.columns:
     A high rate (>0.5) indicates instability in the AI's ranking algorithm.
     """)
 else:
-    st.info("No volatility data available yet. Waiting for first collection cycle...")
+    st.info(" No volatility data available yet. Check GitHub Actions logs to ensure collectors are running successfully.")
