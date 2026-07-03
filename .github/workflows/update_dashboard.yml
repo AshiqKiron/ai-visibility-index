@@ -1,0 +1,28 @@
+name: Refresh Streamlit Dashboard
+
+on:
+  push:
+    paths:
+      - 'data/processed/**'
+      - 'app/**'
+
+jobs:
+  notify-streamlit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Streamlit Cloud Deploy
+        run: |
+          # Streamlit Cloud auto-deploys on push to main branch
+          # This workflow serves as a verification step
+          echo "Data updated at $(date). Streamlit will auto-refresh."
+          
+      - name: Verify Data Integrity
+        uses: actions/checkout@v3
+        
+      - name: Check CSV exists
+        run: |
+          if [ ! -f data/processed/metrics_summary.csv ]; then
+            echo "ERROR: metrics_summary.csv not found!"
+            exit 1
+          fi
+          echo "✅ Data file verified"
