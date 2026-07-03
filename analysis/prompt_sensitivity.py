@@ -1,13 +1,16 @@
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import pandas as pd
 from itertools import combinations
 from src.utils.db_manager import load_data
 
 def calculate_prompt_sensitivity_index(df: pd.DataFrame = None) -> pd.DataFrame:
-    """
-    PSI = Average Jaccard distance between source sets 
-    for different prompt types on the same query/model.
-    Higher PSI = More sensitive to prompt changes.
-    """
+    """PSI = Average Jaccard distance between source sets for different prompt types."""
     if df is None:
         df = load_data()
     
@@ -22,7 +25,6 @@ def calculate_prompt_sensitivity_index(df: pd.DataFrame = None) -> pd.DataFrame:
             
         distances = []
         for (p1, s1), (p2, s2) in combinations(prompt_groups.items(), 2):
-            # Jaccard distance: 1 - (intersection / union)
             intersection = len(s1 & s2)
             union = len(s1 | s2)
             jaccard_dist = 1 - (intersection / union) if union > 0 else 1
@@ -37,3 +39,7 @@ def calculate_prompt_sensitivity_index(df: pd.DataFrame = None) -> pd.DataFrame:
         })
     
     return pd.DataFrame(results)
+
+if __name__ == "__main__":
+    result_df = calculate_prompt_sensitivity_index()
+    print(result_df.head())
