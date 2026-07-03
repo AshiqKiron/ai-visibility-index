@@ -1,10 +1,20 @@
+import sys
+from pathlib import Path
+
+# ✅ Universal path fix for Streamlit Cloud + local dev
+if '/mount/src/' in str(Path.cwd()):
+    PROJECT_ROOT = Path('/mount/src/ai-visibility-index')
+else:
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from pathlib import Path
 
-# ✅ Absolute path relative to this file
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = PROJECT_ROOT
 METRICS_PATH = BASE_DIR / "data" / "processed" / "metrics_summary.csv"
 
 st.title("⚖️ Model Comparison Audit")
@@ -44,7 +54,6 @@ def load_comparison_data():
 df = load_comparison_data()
 
 if not df.empty:
-    # Citation Volume by Model
     st.subheader("Citation Volume by Model")
     model_counts = df['model'].value_counts().reset_index()
     model_counts.columns = ['Model', 'Total Citations']
@@ -56,7 +65,6 @@ if not df.empty:
     )
     st.plotly_chart(fig_bar, use_container_width=True)
     
-    # Authority Bias Comparison
     st.subheader("Average Authority Score of Cited Sources")
     if 'authority_score' in df.columns:
         fig_auth = px.box(
