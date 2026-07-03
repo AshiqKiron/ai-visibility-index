@@ -10,19 +10,40 @@ METRICS_PATH = BASE_DIR / "data" / "processed" / "metrics_summary.csv"
 st.title("⚖️ Model Comparison Audit")
 
 def load_comparison_data():
-    if METRICS_PATH.exists():
-        try:
-            return pd.read_csv(METRICS_PATH)
-        except Exception as e:
-            st.error(f"Error loading comparison data: {e}")
+    """Safely load comparison data with file validation."""
+    if not METRICS_PATH.exists():
+        st.warning("⚠️ No metrics file found. The GitHub Action collector hasn't run yet.")
+        return pd.DataFrame()
+    
+    if METRICS_PATH.stat().st_size == 0:
+        st.warning("⚠️ Data file exists but is empty. Collector produced no results.")
+        return pd.DataFrame()
+    
+    try:
+        df = pd.read_csv(METRICS_PATH)
+        
+        required_cols = ['model']
+        missing = [c for c in required_cols if c not in df.columns]
+        if missing:
+            st.error(f"Data file malformed. Missing columns: {missing}")
             return pd.DataFrame()
-    else:
-        st.warning("⚠️ No metrics data found. Run the GitHub Action collector first.")
+            
+        if df.empty:
+            st.warning("⚠️ Data file has headers but no rows. Waiting for collection...")
+            return pd.DataFrame()
+            
+        return df
+        
+    except pd.errors.EmptyDataError:
+        st.warning("⚠️ Empty data file. Run the GitHub Action collector first.")
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Error loading comparison data: {str(e)}")
         return pd.DataFrame()
 
 df = load_comparison_data()
 
-if not df.empty and 'model' in df.columns:
+if not df.empty:
     # Citation Volume by Model
     st.subheader("Citation Volume by Model")
     model_counts = df['model'].value_counts().reset_index()
@@ -52,4 +73,4 @@ if not df.empty and 'model' in df.columns:
     else:
         st.warning("Authority score data not available in current dataset.")
 else:
-    st.info("No comparison data available yet. Waiting for first collection cycle...")
+    st.info("🔍 No comparison data available yet. Check GitHub Actions logs to ensure collectors are running successfully.")
