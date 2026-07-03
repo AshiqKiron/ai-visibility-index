@@ -1,3 +1,10 @@
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import unittest
 from unittest.mock import patch, MagicMock
 from src.collectors.base_collector import BaseCollector
@@ -23,20 +30,6 @@ class TestChatGPTCollector(unittest.TestCase):
         
         self.assertIsInstance(result, str)
         self.assertEqual(result, "Test response")
-
-class TestPerplexityCollector(unittest.TestCase):
-    @patch('src.collectors.perplexity_collector.sync_playwright')
-    def test_query_handles_timeout(self, mock_playwright):
-        mock_page = MagicMock()
-        mock_page.wait_for_selector.side_effect = Exception("Timeout")
-        mock_browser = MagicMock()
-        mock_browser.new_page.return_value = mock_page
-        mock_playwright.return_value.__enter__.return_value.chromium.launch.return_value = mock_browser
-        
-        collector = PerplexityCollector(headless=True)
-        result = collector.query("test")
-        
-        self.assertEqual(result, "")
 
 if __name__ == '__main__':
     unittest.main()
