@@ -1,10 +1,20 @@
+import sys
+from pathlib import Path
+
+# ✅ Universal path fix for Streamlit Cloud + local dev
+if '/mount/src/' in str(Path.cwd()):
+    PROJECT_ROOT = Path('/mount/src/ai-visibility-index')
+else:
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from pathlib import Path
 
-# ✅ Absolute path relative to this file
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = PROJECT_ROOT
 METRICS_PATH = BASE_DIR / "data" / "processed" / "metrics_summary.csv"
 
 st.title("📉 Volatility & Flicker Tracker")
@@ -15,7 +25,6 @@ def load_volatility_data():
         st.warning("⚠️ No metrics file found. The GitHub Action collector hasn't run yet.")
         return pd.DataFrame()
     
-    # Check for empty file before parsing
     if METRICS_PATH.stat().st_size == 0:
         st.warning("⚠️ Data file exists but is empty. Collector produced no results.")
         return pd.DataFrame()
@@ -23,7 +32,6 @@ def load_volatility_data():
     try:
         df = pd.read_csv(METRICS_PATH)
         
-        # Validate required columns exist
         required_cols = ['date', 'model', 'flicker_rate']
         missing = [c for c in required_cols if c not in df.columns]
         if missing:
@@ -31,7 +39,7 @@ def load_volatility_data():
             return pd.DataFrame()
             
         if df.empty:
-            st.warning("⚠️ Data file has headers but no rows. Waiting for collection...")
+            st.warning("️ Data file has headers but no rows. Waiting for collection...")
             return pd.DataFrame()
             
         df['date'] = pd.to_datetime(df['date'])
@@ -79,4 +87,4 @@ if not df.empty:
     A high rate (>0.5) indicates instability in the AI's ranking algorithm.
     """)
 else:
-    st.info(" No volatility data available yet. Check GitHub Actions logs to ensure collectors are running successfully.")
+    st.info("🔍 No volatility data available yet. Check GitHub Actions logs to ensure collectors are running successfully.")
