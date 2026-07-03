@@ -1,0 +1,42 @@
+name: Daily AI Data Collection
+
+on:
+  schedule:
+    - cron: '0 9 * * *'  # Runs daily at 9 AM UTC
+  workflow_dispatch:      # Allows manual trigger
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        playwright install chromium
+        
+    - name: Run Collectors
+      env:
+        MOZ_API_KEY: ${{ secrets.MOZ_API_KEY }}
+      run: |
+        python src/collectors/run_all_collectors.py
+        
+    - name: Process & Enrich Data
+      run: |
+        python analysis/volatility_metrics.py
+        python src/enrichers/authority_scorer.py
+        
+    - name: Commit and Push Data
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/processed/*
+        git commit -m "Update citation data $(date)" || exit 0
+        git push
