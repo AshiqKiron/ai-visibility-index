@@ -1,3 +1,10 @@
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import pandas as pd
 from src.utils.db_manager import load_data
 from src.utils.config import DATA_DIR
@@ -8,8 +15,7 @@ def calculate_and_save_metrics():
         print("No data to analyze.")
         return
 
-    # 1. Calculate Flicker Rate per Model per Day
-    # Logic: Compare top source of Day N vs Day N-1
+    # Calculate Flicker Rate per Model per Day
     df['date'] = pd.to_datetime(df['timestamp']).dt.date
     daily_top = df.sort_values('position').drop_duplicates(subset=['model', 'query', 'date'], keep='first')
     
@@ -35,7 +41,7 @@ def calculate_and_save_metrics():
     else:
         daily_flicker_rate = pd.DataFrame(columns=['date', 'model', 'flicker_rate'])
 
-    # 2. Calculate Authority Correlation
+    # Calculate Authority Correlation
     corr_data = df.groupby(['model', 'source_domain']).agg(
         avg_auth=('authority_score', 'mean'),
         citation_count=('id', 'count')
