@@ -2,41 +2,75 @@ name: Daily AI Data Collection
 
 on:
   schedule:
-    - cron: '0 9 * * *'  # Runs daily at 9 AM UTC
-  workflow_dispatch:      # Allows manual trigger
+    # Runs daily at 9:00 AM UTC (Adjust as needed)
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Allows manual triggering from the Actions tab
 
 jobs:
   collect:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    # 1. Checkout Repository
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Fetch full history for safe pushing
+        
+    # 2. Setup Python Environment
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
+        cache: 'pip' # Caches pip dependencies for faster runs
         
-    - name: Install dependencies
+    # 3. Install Dependencies (FIXED: No sqlite3)
+    - name: Install Python Dependencies
       run: |
+        python -m pip install --upgrade pip
         pip install -r requirements.txt
+        
+    # 4. Install Playwright Browsers
+    - name: Install Playwright Chromium
+      run: |
         playwright install chromium
+        playwright install-deps chromium # Installs system libs needed for headless Chrome
         
-    - name: Run Collectors
+    # 5. Run Data Collectors
+    - name: Execute AI Scrapers
       env:
-        MOZ_API_KEY: ${{ secrets.MOZ_API_KEY }}
+        # Add any API keys here if needed later
+        PYTHONPATH: ${{ github.workspace }}
       run: |
+        echo "Starting data collection..."
         python src/collectors/run_all_collectors.py
+        echo "Collection complete."
         
-    - name: Process & Enrich Data
+    # 6. Process & Calculate Metrics
+    - name: Analyze Volatility & Enrich Data
       run: |
+        echo "Calculating flicker rates and authority scores..."
         python analysis/volatility_metrics.py
         python src/enrichers/authority_scorer.py
+        echo "Analysis complete."
         
-    - name: Commit and Push Data
+    # 7. Commit & Push Updated Data
+    - name: Commit and Push Results
       run: |
         git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add data/processed/*
-        git commit -m "Update citation data $(date)" || exit 0
-        git push
+        git config --local user.name "GitHub Action Bot"
+        
+        # Add only processed data files
+        git add data/processed/citations.db
+        git add data/processed/metrics_summary.csv
+        
+        # Check if there are changes to commit
+        if git diff --staged --quiet; then
+          echo "No changes detected in data files."
+        else
+          git commit -m "🤖 Auto-update: AI citation data $(date +'%Y-%m-%d %H:%M')"
+          
+          # Pull first to avoid conflicts if another job ran recently
+          git pull --rebase origin main
+          git push origin main
+          echo "✅ Data successfully pushed to repository."
+        fi
