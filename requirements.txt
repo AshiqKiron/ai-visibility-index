@@ -1,0 +1,13 @@
+selenium
+playwright
+pandas
+numpy
+sqlite3
+streamlit
+plotly
+requests
+beautifulsoup4
+spacy
+vaderSentiment
+scikit-learn
+mozapi # If using Moz free tier, else use requests for custom scraping
