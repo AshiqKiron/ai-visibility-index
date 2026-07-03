@@ -1,7 +1,15 @@
 import sys
 from pathlib import Path
+import os
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# ✅ FIX: Detect Streamlit Cloud environment and use correct base path
+if '/mount/src/' in str(Path.cwd()):
+    # Streamlit Cloud mounts repo at /mount/src/<repo-name>
+    PROJECT_ROOT = Path('/mount/src/ai-visibility-index')
+else:
+    # Local development fallback
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -10,12 +18,12 @@ import pandas as pd
 import plotly.express as px
 import sqlite3
 
-# ✅ Absolute paths relative to this file
-BASE_DIR = Path(__file__).resolve().parent.parent
+# ✅ Paths now resolve correctly on both local and Streamlit Cloud
+BASE_DIR = PROJECT_ROOT
 DB_PATH = BASE_DIR / "data" / "processed" / "citations.db"
 METRICS_PATH = BASE_DIR / "data" / "processed" / "metrics_summary.csv"
 
-st.title("️ Prompt Sensitivity Analysis")
+st.title("🗣️ Prompt Sensitivity Analysis")
 
 def load_prompt_data():
     """Try DB first (has prompt_type), fall back to CSV with safety checks."""
@@ -38,7 +46,7 @@ def load_prompt_data():
             elif 'prompt_type' not in df.columns:
                 st.warning("⚠️ DB exists but missing 'prompt_type' column. Check collector schema.")
             else:
-                st.warning("⚠️ DB exists but is empty.")
+                st.warning("️ DB exists but is empty.")
         except Exception as e:
             st.warning(f"⚠️ DB read failed: {e}")
     
@@ -90,4 +98,4 @@ if not df.empty and 'prompt_type' in df.columns:
     - **Freshness Prompts** significantly increase the citation of blogs and news outlets over .edu/.gov sites.
     """)
 else:
-    st.info(" No prompt audit data available yet. Check GitHub Actions logs to ensure collectors are running successfully and saving `prompt_type` to the database.")
+    st.info("🔍 No prompt audit data available yet. Check GitHub Actions logs to ensure collectors are running successfully and saving `prompt_type` to the database.")
