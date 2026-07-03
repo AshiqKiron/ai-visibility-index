@@ -1,40 +1,29 @@
-import streamlit as st
-import pandas as pd
-from pathlib import Path
-
-# ✅ FIX: Use absolute paths relative to THIS file's location
-BASE_DIR = Path(__file__).resolve().parent.parent
-METRICS_PATH = BASE_DIR / "data" / "processed" / "metrics_summary.csv"
-DB_PATH = BASE_DIR / "data" / "processed" / "citations.db"
-
-st.set_page_config(page_title="AI Visibility Index", layout="wide")
-st.title(" AI Visibility & Stability Index (AVSI)")
-
 def load_data():
-    """Safely load metrics CSV with fallback handling."""
-    if METRICS_PATH.exists():
-        try:
-            df = pd.read_csv(METRICS_PATH)
-            return df
-        except Exception as e:
-            st.error(f"Error reading CSV: {e}")
-            return pd.DataFrame()
-    else:
-        st.warning(
-            "⚠️ No data found yet! The GitHub Action collector hasn't run or failed. "
-            "Check the Actions tab in GitHub."
-        )
+    """Safely load metrics CSV, handling missing/empty/corrupt files."""
+    if not METRICS_PATH.exists():
+        st.warning("⚠️ No data file found. The GitHub Action collector hasn't run yet.")
         return pd.DataFrame(columns=['date', 'model', 'flicker_rate', 'authority_score', 'citation_count'])
-
-# Load data safely
-df = load_data()
-
-# Rest of your dashboard code...
-if not df.empty:
-    # Your existing charts and metrics go here
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Avg Flicker Rate", f"{df['flicker_rate'].mean():.1%}" if 'flicker_rate' in df.columns else "N/A")
-    # ... rest of dashboard
-else:
-    st.info("Waiting for first data collection cycle...")
+    
+    try:
+        # Check file size first - empty files are 0 bytes
+        if METRICS_PATH.stat().st_size == 0:
+            st.warning("⚠️ Data file exists but is empty. The collector ran but produced no results.")
+            return pd.DataFrame(columns=['date', 'model', 'flicker_rate', 'authority_score', 'citation_count'])
+        
+        df = pd.read_csv(METRICS_PATH)
+        
+        # Verify required columns exist
+        required_cols = ['date', 'model']
+        missing = [c for c in required_cols if c not in df.columns]
+        if missing:
+            st.error(f"Data file is malformed. Missing columns: {missing}")
+            return pd.DataFrame()
+            
+        return df
+        
+    except pd.errors.EmptyDataError:
+        st.warning("⚠️ Data file is empty. Waiting for successful collection cycle...")
+        return pd.DataFrame(columns=['date', 'model', 'flicker_rate', 'authority_score', 'citation_count'])
+    except Exception as e:
+        st.error(f"Error reading CSV: {e}")
+        return pd.DataFrame()
