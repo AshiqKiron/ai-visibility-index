@@ -12,6 +12,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 
 BASE_DIR = PROJECT_ROOT
 METRICS_PATH = BASE_DIR / "data" / "processed" / "metrics_summary.csv"
@@ -44,18 +45,50 @@ def load_data():
 df = load_data()
 
 if not df.empty:
+    # --- FIX 1: Safe Metric Calculation ---
     col1, col2, col3 = st.columns(3)
+    
     with col1:
-        avg_flicker = df['flicker_rate'].mean() if 'flicker_rate' in df.columns else 0
-        st.metric("Avg Flicker Rate", f"{avg_flicker:.1%}")
+        if 'flicker_rate' in df.columns:
+            # Convert to numeric safely, drop NaNs before averaging
+            valid_rates = pd.to_numeric(df['flicker_rate'], errors='coerce').dropna()
+            avg_flicker = valid_rates.mean() if not valid_rates.empty else 0
+            st.metric("Avg Flicker Rate", f"{avg_flicker:.1%}")
+        else:
+            st.metric("Avg Flicker Rate", "N/A")
+            
     with col2:
         st.metric("Models Tracked", df['model'].nunique() if 'model' in df.columns else 0)
+        
     with col3:
         total_citations = df['citation_count'].sum() if 'citation_count' in df.columns else 0
-        st.metric("Total Citations", f"{total_citations:,}")
+        st.metric("Total Citations", f"{int(total_citations):,}")
 
+    # --- FIX 2: Add Missing Volatility Chart ---
     st.subheader("Citation Volatility Over Time")
-    # Add your existing chart code here when data is populated
+    
+    if 'date' in df.columns and 'flicker_rate' in df.columns:
+        # Ensure date is datetime for proper plotting
+        df['date'] = pd.to_datetime(df['date'])
+        
+        fig = px.line(
+            df, 
+            x='date', 
+            y='flicker_rate', 
+            color='model',
+            title="Daily Flicker Rate by Model",
+            markers=True,
+            template="plotly_dark"  # Matches dark theme
+        )
+        fig.update_layout(
+            height=450,
+            yaxis_title="Flicker Rate (0-1)",
+            legend_title="AI Model"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Chart data unavailable. Ensure 'date' and 'flicker_rate' columns exist in your dataset.")
+
 else:
     st.info("🔍 No data available yet. The collector hasn't produced results.")
     st.markdown("""
@@ -63,7 +96,4 @@ else:
     1. Go to your GitHub repo → **Actions** tab  
     2. Click **Daily AI Data Collection** → **Run workflow**  
     3. Wait for the green checkmark, then **refresh this page**
-    
-    > 💡 If the Action keeps failing, check the logs under the 
-    > "Execute AI Scrapers" step for authentication or timeout errors.
     """)
