@@ -149,13 +149,13 @@ playwright install chromium
 
 ### Run locally
 
-# 1. Collect data (mock mode by default)
+1. Collect data (mock mode by default)
 python src/collectors/run_all_collectors.py
 
-# 2. Process metrics
+2. Process metrics
 python analysis/volatility_metrics.py
 
-# 3. Launch dashboard
+3. Launch dashboard
 streamlit run app/home.py
 
 ### Deploy to Streamlit Cloud
