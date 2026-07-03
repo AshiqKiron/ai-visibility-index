@@ -7,6 +7,16 @@
 
 ---
 
+**Live Demo:** https://ashiqkiron.github.io/ai-visibility-index/
+
+### AVSI ![](avsi-1.png)
+### AVSI ![](avsi.png)
+### Tracker ![](tracker.png)
+### Model Compare ![](model-compare.png)
+### Prompt Analysis ![](prompt-analysis.png)
+
+---
+
 ## 🔍 What This Project Is
 
 The **AI Visibility & Stability Index (AVSI)** is an open-source monitoring system that treats AI search results as dynamic datasets. Unlike traditional SEO tools that track static rankings, AVSI continuously probes major AI models (ChatGPT, Gemini, Perplexity, Copilot) to measure:
